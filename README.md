@@ -55,6 +55,8 @@ This is my growing collection of Open WebUI tools that I've created to enhance m
 - Support for various time formats
 
 **Usage Examples**:
+- **NEW!** "Calculate the time 2 hours from now. The current time is 12:55 PM"
+- **NEW!** "What time will it be in 6 hours? It is 10:45 AM"
 - "Add 2 hours 30 minutes to now"
 - "Subtract 3 days from tomorrow"
 - "What's the difference between now and tomorrow?"
@@ -62,6 +64,7 @@ This is my growing collection of Open WebUI tools that I've created to enhance m
 - "Parse tomorrow at 3pm to timestamp"
 
 **Available Functions**:
+- `calculate_time_from_query()` - **NEW!** Smart query parser for conversational time requests
 - `calculate_time_addition()` - Add duration to a base time
 - `calculate_time_subtraction()` - Subtract duration from a base time  
 - `calculate_time_difference()` - Find difference between two times
@@ -72,9 +75,12 @@ This is my growing collection of Open WebUI tools that I've created to enhance m
 
 **Configuration**: No configuration required - works out of the box!
 
-**Recent Updates**:
-- Fixed bug where relative dates like "tomorrow" were calculating from midnight instead of current time
-- Improved natural language parsing for "today", "tomorrow", and "yesterday"
+**Recent Updates (v1.0.0)**:
+- **🆕 NEW**: Smart conversational query parsing with `calculate_time_from_query()`
+- **🔧 Enhanced**: Better handling of "in X duration" patterns (e.g., "in 2 hours", "in 30 minutes")
+- **🎯 Improved**: Automatic base time extraction from queries like "current time is 12:55 PM"
+- **💬 Better UX**: More natural language understanding for time calculations
+- **🛠️ Technical**: Enhanced `parse_natural_datetime()` and new `extract_base_time_from_query()` function
 
 ---
 

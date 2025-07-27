@@ -101,6 +101,39 @@ def parse_natural_datetime(date_str: str) -> datetime.datetime:
     date_str = date_str.lower().strip()
     now = get_current_time()
     
+    # Handle "in X duration" patterns (e.g., "in 2 hours", "in 30 minutes")
+    if date_str.startswith('in '):
+        duration_part = date_str[3:].strip()  # Remove "in " prefix
+        duration_components = parse_duration(duration_part)
+        
+        if duration_components:
+            result_dt = now
+            
+            # Add years and months using helper function
+            if 'years' in duration_components:
+                result_dt = add_months(result_dt, duration_components['years'] * 12)
+            if 'months' in duration_components:
+                result_dt = add_months(result_dt, duration_components['months'])
+            
+            # Add other time units using timedelta
+            delta = datetime.timedelta(
+                weeks=duration_components.get('weeks', 0),
+                days=duration_components.get('days', 0),
+                hours=duration_components.get('hours', 0),
+                minutes=duration_components.get('minutes', 0),
+                seconds=duration_components.get('seconds', 0)
+            )
+            result_dt = result_dt + delta
+            return result_dt
+    
+    # Handle simple time strings (assume today's date)
+    if re.match(r'^\d{1,2}:\d{2}\s*(?:am|pm)$', date_str) or re.match(r'^\d{1,2}\s*(?:am|pm)$', date_str):
+        try:
+            parsed_time = parse_time_string(date_str)
+            return datetime.datetime.combine(now.date(), parsed_time)
+        except:
+            pass
+    
     # Handle relative terms
     if 'now' in date_str:
         return now
@@ -148,6 +181,34 @@ def parse_natural_datetime(date_str: str) -> datetime.datetime:
     return now
 
 
+def extract_base_time_from_query(query: str) -> str:
+    """
+    Extract base time information from a user query.
+    Looks for patterns like "current time is X", "the time is X", "it's X", etc.
+    """
+    query = query.lower().strip()
+    
+    # Pattern 1: "current time is X" or "the current time is X"
+    match = re.search(r'(?:the\s+)?current\s+time\s+is\s+([^.!?]+)', query)
+    if match:
+        return match.group(1).strip()
+    
+    # Pattern 2: "the time is X" or "time is X"
+    match = re.search(r'(?:the\s+)?time\s+is\s+([^.!?]+)', query)
+    if match:
+        return match.group(1).strip()
+    
+    # Pattern 3: "it's X" or "it is X" (when referring to time)
+    match = re.search(r'it(?:\'s|\s+is)\s+([^.!?]+)', query)
+    if match:
+        time_part = match.group(1).strip()
+        # Only consider it a time if it looks like a time format
+        if re.search(r'\d+(?::\d+)?\s*(?:am|pm|AM|PM)', time_part) or re.search(r'\d{1,2}:\d{2}', time_part):
+            return time_part
+    
+    return None
+
+
 def format_duration(total_seconds: int) -> str:
     """
     Format a duration in seconds into a human-readable string.
@@ -193,6 +254,53 @@ def format_duration(total_seconds: int) -> str:
 class Tools:
     def __init__(self):
         self.citation = True
+
+    def calculate_time_from_query(self, query: str) -> str:
+        """
+        Calculate time based on a natural language query that may contain both duration and base time.
+        Examples: "calculate the time 2 hours from now. the current time is 12:55 PM."
+        :param query: Natural language query containing time calculation request
+        :return: The calculated time result
+        """
+        try:
+            # Extract base time from query if specified
+            base_time_str = extract_base_time_from_query(query)
+            
+            # Look for duration patterns in the query
+            duration_patterns = [
+                r'(\d+\s+(?:hours?|hrs?|h))',
+                r'(\d+\s+(?:minutes?|mins?|m))',
+                r'(\d+\s+(?:seconds?|secs?|s))',
+                r'(\d+\s+(?:days?|d))',
+                r'(\d+\s+(?:weeks?|wks?|w))',
+                r'(\d+\s+(?:months?|mos?))',
+                r'(\d+\s+(?:years?|yrs?))'
+            ]
+            
+            duration_str = ""
+            for pattern in duration_patterns:
+                matches = re.findall(pattern, query.lower())
+                if matches:
+                    duration_str += " ".join(matches) + " "
+            
+            duration_str = duration_str.strip()
+            
+            if not duration_str:
+                return "Could not extract duration from query. Please specify a duration like '2 hours', '30 minutes', etc."
+            
+            # Determine operation (addition is default)
+            operation = "add"
+            if any(word in query.lower() for word in ['subtract', 'minus', 'before', 'ago', 'earlier']):
+                operation = "subtract"
+            
+            # Use the appropriate calculation method
+            if operation == "subtract":
+                return self.calculate_time_subtraction(duration_str, base_time_str)
+            else:
+                return self.calculate_time_addition(duration_str, base_time_str)
+                
+        except Exception as e:
+            return f"Error processing query: {str(e)}"
 
     def calculate_time_addition(self, duration_str: str, base_time: str = None) -> str:
         """
